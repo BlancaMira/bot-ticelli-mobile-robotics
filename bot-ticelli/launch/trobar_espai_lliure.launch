@@ -1,0 +1,20 @@
+<launch>
+    <arg name="drawing_width" default="0.60"/>
+    <arg name="drawing_height" default="0.40"/>
+    <arg name="safety_margin" default="0.15"/>
+    <arg name="min_explore_time" default="5.0"/>
+
+    <node pkg="bot-ticelli"
+          type="trobar_espai_lliure"
+          name="trobar_espai_lliure"
+          output="screen">
+
+        <param name="drawing_width" value="$(arg drawing_width)"/>
+        <param name="drawing_height" value="$(arg drawing_height)"/>
+        <param name="safety_margin" value="$(arg safety_margin)"/>
+        <param name="min_explore_time" value="$(arg min_explore_time)"/>
+        <param name="occupied_threshold" value="20"/>
+    </node>
+</launch>
+
+
