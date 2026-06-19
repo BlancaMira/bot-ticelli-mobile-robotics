@@ -1,0 +1,33 @@
+global_frame: "odom"
+robot_frame: "base_footprint"
+
+path_topic: "/drawing_path"
+go_topic: "/go_to_drawing"
+
+cmd_vel_topic: "/cmd_vel"
+drawing_ready_topic: "/drawing_ready"
+
+goal_tolerance: 0.06
+final_angle_tolerance: 0.14
+
+linear_speed: 0.08
+min_linear_speed: 0.03
+
+angular_speed: 0.55
+min_angular_speed: 0.16
+angular_correction_speed: 0.25
+
+kp_linear: 0.9
+kp_angular: 1.8
+
+min_goal_distance: 0.10
+tangent_distance: 0.08
+
+rotate_only_angle: 0.75
+
+control_rate: 20.0
+
+# Ha de coincidir amb drawing_follower_params.yaml.
+# Mesura la punta del retolador respecte l'eix de les rodes / base_footprint.
+tool_offset_x: 0.07
+tool_offset_y: 0.0

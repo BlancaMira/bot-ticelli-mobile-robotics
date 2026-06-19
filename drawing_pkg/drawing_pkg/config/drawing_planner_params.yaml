@@ -1,0 +1,29 @@
+global_frame: "odom"
+robot_frame: "base_footprint"
+
+contour_topic: "/contour_points"
+dimensions_topic: "/drawing_dimensions"
+
+path_topic: "/drawing_path"
+marker_topic: "/drawing_marker"
+
+use_robot_pose_as_center: true
+anchor_mode: "center"
+
+invert_y: true
+close_path: true
+
+drawing_scale: 1.0
+
+min_width: 0.30
+min_height: 0.30
+
+# Equilibri per Pikachu / estrella / cercle:
+# - conserva cantonades
+# - manté corbes prou suaus
+# - no genera punts excessius
+min_point_distance: 0.018
+simplify_tolerance: 0.008
+resample_distance: 0.040
+
+marker_line_width: 0.025

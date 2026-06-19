@@ -1,0 +1,77 @@
+global_frame: "odom"
+robot_frame: "base_footprint"
+
+
+path_topic: "/drawing_path"
+cmd_vel_topic: "/cmd_vel"
+
+
+# Seguiment general
+lookahead_distance: 0.08
+min_lookahead_distance: 0.045
+
+
+# Velocitat de dibuix
+linear_speed: 0.030
+min_linear_speed: 0.012
+max_reverse_speed: 0.018
+
+
+# Reduccio de velocitat segons forma
+curve_speed_factor: 0.65
+corner_speed_factor: 0.40
+
+
+# Gir
+max_angular_speed: 0.45
+angular_gain: 2.0
+
+# Punt real que dibuixa.
+# Mesura la punta del retolador respecte l'eix de les rodes / base_footprint.
+# x positiu = cap endavant del robot, y positiu = esquerra del robot.
+use_tool_offset_control: true
+tool_offset_x: 0.07
+tool_offset_y: 0.0
+tool_control_gain: 1.4
+
+
+# Tolerancies
+goal_tolerance: 0.06
+waypoint_tolerance: 0.055
+max_start_distance: 0.35
+closed_goal_tolerance: 0.035
+
+
+angle_tolerance: 0.08
+turn_in_place_angle: 0.55
+
+
+# Deteccio de corbes i cantonades
+# 0.20 rad = ~11 graus: corba, baixa velocitat
+# 0.55 rad = ~32 graus: cantonada, para i gira quiet
+curve_angle_threshold: 0.20
+corner_angle_threshold: 0.55
+
+
+corner_detection_distance: 0.22
+corner_slowdown_distance: 0.18
+corner_stop_radius: 0.08
+corner_tangent_distance: 0.08
+
+
+progress_search_window: 18
+max_progress_index_step: 4
+corner_back_search: 0
+corner_min_index_gap: 4
+
+
+control_rate: 20.0
+
+
+rotate_closed_path_to_nearest: true
+reverse_closed_path_to_match_heading: true
+start_heading_weight: 0.08
+closing_start_points: 3
+require_start_command: true
+prealign_enabled: false
+stop_at_corners: false

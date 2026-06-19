@@ -1,0 +1,11 @@
+<launch>
+  <node pkg="visio_pkg"
+        type="user_interface_node"
+        name="user_interface_node"
+        output="screen">
+
+    <param name="safety_margin" value="0.20"/>
+
+  </node>
+</launch>
+

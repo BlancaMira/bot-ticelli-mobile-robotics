@@ -1,0 +1,17 @@
+image_topic: "/camera/image/compressed"
+
+epsilon_factor: 0.002
+min_area: 500.0
+
+blur_size: 5
+kernel_size: 3
+
+morphology_mode: "close_open"
+morphology_iterations: 1
+
+contour_mode: "none"
+
+display_width: 400
+display_height: 400
+
+show_windows: true

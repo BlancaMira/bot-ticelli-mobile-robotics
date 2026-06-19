@@ -1,0 +1,13 @@
+<launch>
+  <node pkg="visio_pkg"
+        type="vision_node"
+        name="vision_node"
+        output="screen">
+
+    <rosparam file="$(find visio_pkg)/config/vision_params.yaml" command="load"/>
+
+  </node>
+</launch>
+
+
+

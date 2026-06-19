@@ -1,0 +1,10 @@
+<launch>
+  <node pkg="drawing_pkg"
+        type="drawing_follower_node"
+        name="drawing_follower_node"
+        output="screen">
+
+    <rosparam file="$(find drawing_pkg)/config/drawing_follower_params.yaml" command="load"/>
+
+  </node>
+</launch>
