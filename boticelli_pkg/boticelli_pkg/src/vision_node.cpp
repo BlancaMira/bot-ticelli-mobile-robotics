@@ -12,6 +12,16 @@
 #include <string>
 #include <algorithm>
 
+/*
+ * Node de visio.
+ *
+ * Rep imatges comprimides de la camera, detecta el contorn de la figura i el publica
+ * com a punts 2D. La captura es fa nomes quan la interfície envia /capture_contour,
+ * de manera que l'usuari pot esperar fins que el full i la figura es vegin be.
+ *
+ * Aquest node treballa en pixels. La conversio a metres i al frame map es fa despres
+ * al drawing_planner_node.
+ */
 class VisionNode
 {
 private:
@@ -88,6 +98,8 @@ public:
         ROS_INFO("Publicant informacio de contorn a: /contour_info");
     }
 
+    // Ordre de captura. Quan arriba true, el proper contorn valid queda bloquejat
+    // i s'utilitza com a entrada definitiva del dibuix.
     void captureCallback(const std_msgs::Bool::ConstPtr& msg)
     {
         if (!msg->data) {
@@ -103,6 +115,8 @@ public:
         ROS_INFO("Ordre de captura rebuda. Es publicara el proper contorn valid.");
     }
 
+    // Callback principal d'imatge: descodifica, processa, mostra debug i publica
+    // el contorn si hi ha una captura pendent.
     void imageCallback(const sensor_msgs::CompressedImageConstPtr& msg)
     {
         cv::Mat image = decodeCompressedImage(msg);
@@ -151,6 +165,7 @@ public:
         cv::waitKey(1);
     }
 
+    // Converteix el missatge comprimit de ROS en una imatge OpenCV BGR.
     cv::Mat decodeCompressedImage(const sensor_msgs::CompressedImageConstPtr& msg)
     {
         try {
@@ -163,6 +178,12 @@ public:
         }
     }
 
+    // Pipeline de segmentacio:
+    // 1) passar a grisos,
+    // 2) suavitzar per reduir soroll,
+    // 3) aplicar Otsu amb inversio per separar tinta/fons,
+    // 4) netejar amb morfologia,
+    // 5) quedar-se amb el contorn mes gran i simplificar-lo.
     bool processImage(const cv::Mat& image,
                       cv::Mat& mask,
                       std::vector<cv::Point>& best_contour,
@@ -234,6 +255,7 @@ public:
         return true;
     }
 
+    // Neteja la mascara binaria. "close" tanca petits forats i "open" elimina soroll.
     void applyMorphology(cv::Mat& mask)
     {
         int k = kernel_size_;
@@ -267,6 +289,8 @@ public:
         }
     }
 
+    // Publica el contorn en coordenades normalitzades respecte la bounding box. La coordenada (0,0) es la cantonada superior esquerra del rectangle i (1,1) la cantonada inferior dreta.
+    // Aixo fa que el planner pugui escalar la figura a qualsevol mida en metres.
     void publishContour(const std::vector<cv::Point>& contour, const cv::Rect& bbox)
     {
         geometry_msgs::PolygonStamped msg;
@@ -287,6 +311,7 @@ public:
         contour_pub_.publish(msg);
     }
 
+    // Publica amplada, alçada i relacio d'aspecte del contorn detectat.
     void publishContourInfo(const cv::Rect& bbox)
     {
         geometry_msgs::Vector3 info_msg;
@@ -298,6 +323,7 @@ public:
         contour_info_pub_.publish(info_msg);
     }
 
+    // Mostra imatge original, mascara i contorn. Es una eina de comprovacio per l'usuari.
     void showResult(const cv::Mat& image,
                     const cv::Mat& mask,
                     const std::vector<cv::Point>& original_contour,
