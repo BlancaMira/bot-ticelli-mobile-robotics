@@ -23,9 +23,28 @@
 #include <fstream>
 #include <iomanip>
 
+/*
+ * Node d'exploracio durant el SLAM.
+ *
+ * Gmapping s'encarrega de l'estimacio probabilistica del mapa a partir de laser i odometria.
+ * Aquest node no substitueix gmapping: simplement mou el robot de forma segura mentre
+ * gmapping construeix /map, observa el mapa d'ocupacio resultant i tria una zona lliure
+ * prou gran per fer-hi el dibuix.
+ *
+ * Funcions principals:
+ *  - Evitar obstacles amb el LaserScan mentre s'explora.
+ *  - Guardar el mapa amb map_saver quan acaba l'exploracio.
+ *  - Tornar prop del punt inicial per tancar el llaç.
+ *  - Buscar en el mapa una regio lliure suficient per al dibuix.
+ *  - Publicar READY_FOR_VISION quan el sistema ja pot passar a visio i dibuix.
+ *
+ * Tambe guarda "features" geometriques simples del laser. No son necessaries per gmapping,
+ * pero serveixen com a registre de landmarks com punts/parets/cantonades observades durant l'exploracio.
+ */
 class FindFreeSpaceExplorer
 {
 private:
+    // Feature geometrica registrada durant l'exploracio. Es guarda amb tipus, pose i score.
     struct Feature
     {
         std::string type;
@@ -33,6 +52,8 @@ private:
         double score;
     };
 
+    // Punt del laser convertit a coordenades del mapa/robot per poder analitzar parets
+    // i obstacles com geometria 2D.
     struct ScanPoint
     {
         double x;
@@ -42,6 +63,7 @@ private:
         int index;
     };
 
+    // Segment de paret aproximat a partir d'un grup de punts de laser.
     struct WallSegment
     {
         double x;
@@ -53,6 +75,7 @@ private:
         int end_index;
     };
 
+    // Maquina d'estats de l'explorador. Cada estat correspon a una etapa clara del flux.
     enum Mode
     {
         EXPLORING,
@@ -78,21 +101,26 @@ private:
 
     nav_msgs::OccupancyGrid::ConstPtr map_;
 
+    // Dimensions minimes de la zona lliure que volem trobar per fer el dibuix.
     double drawing_width_;
     double drawing_height_;
     double safety_margin_;
 
-    double min_explore_time_;
+    // Parametres temporals i de creixement del mapa. El final real de l'exploracio
+    // el marca max_explore_time.
     double max_explore_time_;
     double map_stable_time_;
     double map_growth_epsilon_;
 
+    // Parametres de moviment i tolerancia per arribar als objectius.
     double goal_tolerance_;
     double max_linear_speed_;
     double max_angular_speed_;
 
+    // Llindar per interpretar cel·les del mapa d'ocupacio com a obstacles.
     int occupied_threshold_;
 
+    // Fitxers de sortida: mapa guardat i registre de features (landmarks).
     bool auto_save_map_;
     bool map_saved_;
     std::string map_output_file_;
@@ -101,14 +129,18 @@ private:
     bool found_space_;
     bool goal_available_;
 
+    // Objectiu actual de navegacio dins el mapa.
     double goal_x_;
     double goal_y_;
 
+    // Pose inicial del robot. Serveix per tornar aproximadament al punt de sortida
+    // abans de calcular la zona final de dibuix i aixi poder tancar el llaç.
     bool start_pose_set_;
     double start_x_;
     double start_y_;
     double start_yaw_;
 
+    // Parametres que limiten quantes features es guarden i cada quant es poden repetir.
     double feature_min_distance_;
     double feature_min_time_;
     double scan_feature_min_distance_;
@@ -132,6 +164,7 @@ private:
 
     std::vector<Feature> features_;
 
+    // Direccio de gir preferida per evitar canvis bruscos esquerra/dreta.
     int turn_direction_;
 
     ros::Time start_time_;
@@ -139,6 +172,7 @@ private:
 
     Mode mode_;
 
+    // Estadistiques del mapa d'ocupacio utilitzades per diagnostics i seleccio de zona.
     double known_area_;
     double free_area_;
     double occupied_area_;
@@ -149,19 +183,20 @@ private:
     int stall_counter_ = 0;
     bool first_laser_received_ = false;
 
-    // Anti-oscillació: bloqueig de canvi de direcció de gir
+    // Anti-oscillació: bloqueig de canvi de direcció de gir fins que passi 1.5s. 
     ros::Time last_turn_change_time_;
     const double MIN_TURN_LOCK_SEC = 1.5;
 
-    // Detecció d'engancxament durant exploració
+    // Detecció d'encallament durant exploració per evitar que el robot es quedi atrapat en un obstacle o cantonada. 
+    // Mira si el robot s'ha mogut prou en els darrers 10 segons. Si no, incrementa un comptador i canvia de mode.
     ros::Time last_exploration_progress_time_;
     double last_exploration_x_ = 0.0;
     double last_exploration_y_ = 0.0;
     int exploration_stall_counter_ = 0;
 
-    // ==========================================
+    // =============================================
     // PARÀMETRES DE GEOMETRIA DEL ROBOT (WAFFLE PI)
-    // ==========================================
+    // =============================================
     const double ROBOT_RADIUS = 0.21;       // Radi físic del robot en metres (diagonal/2)
     const double ROBOT_SAFETY = 0.20;       // Marge d'evitació actiu augmentat per mapa gran (~0.41 total)
     const double CRITICAL_ZONE = ROBOT_RADIUS + 0.20; // ~0.41m. Col·lisió imminent
@@ -210,7 +245,6 @@ public:
         nh_.param("drawing_height", drawing_height_, 0.30);
         nh_.param("safety_margin", safety_margin_, 0.10);
 
-        nh_.param("min_explore_time", min_explore_time_, 40.0);
         nh_.param("max_explore_time", max_explore_time_, 60.0);
         nh_.param("map_stable_time", map_stable_time_, 12.0);
         nh_.param("map_growth_epsilon", map_growth_epsilon_, 0.15);
@@ -224,9 +258,7 @@ public:
         nh_.param("auto_save_map", auto_save_map_, true);
         nh_.param<std::string>("map_output_file", map_output_file_, "/tmp/mapa_boticelli_real");
         if (!nh_.getParam("features_output_file", features_output_file_)) {
-            if (!nh_.getParam("landmarks_output_file", features_output_file_)) {
-                features_output_file_ = map_output_file_ + "_features.txt";
-            }
+            features_output_file_ = map_output_file_ + "_features.txt";
         }
         nh_.param("feature_min_distance", feature_min_distance_, 0.50);
         nh_.param("feature_min_time", feature_min_time_, 5.0);
@@ -274,7 +306,6 @@ public:
         ROS_WARN("[MODEL] Configurat per a TurtleBot3 Waffle (Radi: %.2fm)", ROBOT_RADIUS);
         ROS_WARN("[PARAMS] Mida dibuix: %.2f x %.2f m", drawing_width_, drawing_height_);
         ROS_WARN("[PARAMS] Marge de seguretat: %.2f m", safety_margin_);
-        ROS_WARN("[PARAMS] Temps minim exploracio: %.2f s", min_explore_time_);
         ROS_WARN("[PARAMS] Temps maxim exploracio: %.2f s", max_explore_time_);
         ROS_WARN("[PARAMS] Temps mapa estable: %.2f s", map_stable_time_);
         ROS_WARN("[PARAMS] Creixement minim mapa: %.2f m2", map_growth_epsilon_);
@@ -302,6 +333,7 @@ public:
         ros::Duration(0.2).sleep();
     }
 
+    // Comptador auxiliar per limitar el nombre de features de cada tipus.
     int countFeaturesOfType(const std::string& type)
     {
         int count = 0;
@@ -314,6 +346,8 @@ public:
         return count;
     }
 
+    // Afegeix una feature si no esta massa a prop d'una feature igual ja registrada.
+    // Aixo evita omplir el fitxer amb moltes deteccions repetides del mateix obstacle.
     int addFeature(const std::string& type,
                     double x,
                     double y,
@@ -383,6 +417,8 @@ public:
         return static_cast<int>(index);
     }
 
+    // Captura la pose inicial a partir de TF. Es fa una sola vegada i serveix com a
+    // referencia per tornar a una zona coneguda abans de calcular el punt de dibuix.
     bool captureStartPoseIfNeeded()
     {
         if (start_pose_set_) {
@@ -408,6 +444,8 @@ public:
         return true;
     }
 
+    // Registra mostres de trajectoria del robot. No es fa a cada iteracio, sino amb
+    // distancia i temps minims per obtenir un registre discret i llegible.
     void recordFeatureIfNeeded()
     {
         if (!start_pose_set_) {
@@ -436,6 +474,7 @@ public:
         ROS_INFO("[FEATURES] Recorregut actualitzat -> feature #%d. x=%.2f y=%.2f yaw=%.2f", idx, x, y, yaw);
     }
 
+    // Guarda la pose actual com a retorn al punt inicial quan acaba l'exploracio.
     void recordCurrentPoseAsFeature()
     {
         double x, y, yaw;
@@ -447,6 +486,8 @@ public:
         ROS_WARN("[FEATURES] Retorn a l'inici registrat -> feature #%d de retorn a l'inici. x=%.2f y=%.2f yaw=%.2f", idx, x, y, yaw);
     }
 
+    // Converteix una lectura del laser en un punt 2D del mapa. Aquesta transformacio
+    // permet analitzar parets i obstacles en coordenades globals, no nomes relatives.
     bool scanPointToMap(double robot_x,
                         double robot_y,
                         double robot_yaw,
@@ -465,6 +506,8 @@ public:
         return true;
     }
 
+    // Ajusta un segment recte a un conjunt de punts del laser. Si l'error es petit,
+    // el grup es considera una paret o tram recte de l'entorn.
     bool fitWallSegment(const std::vector<ScanPoint>& points,
                         int begin,
                         int end,
@@ -544,6 +587,8 @@ public:
         return true;
     }
 
+    // Si dos segments de paret consecutius formen un canvi d'angle clar, es registra
+    // una cantonada geometrica.
     void addWallCornerIfNeeded(const WallSegment& previous,
                                const WallSegment& current,
                                const std::vector<ScanPoint>& points)
@@ -580,6 +625,8 @@ public:
         addFeature("corner_feature", points[best_index].x, points[best_index].y, current.yaw, angle_diff, false);
     }
 
+    // Detecta agrupacions compactes de punts que no encaixen com a paret i les desa
+    // com a clusters d'obstacle.
     void addObstacleClusterIfNeeded(const std::vector<ScanPoint>& points,
                                     int begin,
                                     int end)
@@ -612,6 +659,8 @@ public:
         addFeature("obstacle_cluster", mean_x, mean_y, 0.0, mean_range, false);
     }
 
+    // Analitza el LaserScan per extreure features geometriques simples: parets,
+    // cantonades i obstacles compactes. Aquest registre es independent de gmapping.
     void recordScanFeatures(const sensor_msgs::LaserScan::ConstPtr& msg)
     {
         if (!msg || msg->ranges.empty()) {
@@ -692,6 +741,7 @@ public:
         }
     }
 
+    // Desa el registre de features en un fitxer de text associat al mapa generat.
     bool saveFeaturesIfNeeded()
     {
         if (features_.empty()) {
@@ -737,6 +787,8 @@ public:
         return true;
     }
 
+    // Callback del mapa publicat per gmapping. Cada mapa rebut actualitza estadistiques
+    // de cel·les conegudes, lliures i ocupades.
     void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
     {
         map_ = msg;
@@ -748,6 +800,7 @@ public:
                           map_->info.width, map_->info.height, map_->info.resolution, known_area_, free_area_, occupied_area_, stable_for);
     }
 
+    // Calcula superficies conegudes/lliures/ocupades a partir de l'OccupancyGrid.
     void updateMapStats(const nav_msgs::OccupancyGrid::ConstPtr& msg)
     {
         if (!msg) {
@@ -787,6 +840,7 @@ public:
         }
     }
 
+    // Topic de debug llegible per terminal/RViz: ajuda a saber en quina decisio esta el node.
     void publishState(const std::string& text)
     {
         std_msgs::String msg;
@@ -794,6 +848,8 @@ public:
         state_pub_.publish(msg);
     }
 
+    // Fase de mes alt nivell que escolta la interfície. READY_FOR_VISION es el senyal
+    // que permet passar del SLAM a la captura de la figura.
     void publishPhase(const std::string& phase)
     {
         std_msgs::String msg;
@@ -801,6 +857,7 @@ public:
         current_phase_pub_.publish(msg);
     }
 
+    // Indica si la navegacio interna de l'explorador ha acabat.
     void publishNavigationDone(bool done)
     {
         std_msgs::Bool msg;
@@ -808,6 +865,7 @@ public:
         navigation_done_pub_.publish(msg);
     }
 
+    // Publica el centre de la zona on es dibuixara.
     void publishDrawingCenter(double x, double y)
     {
         geometry_msgs::PoseStamped msg;
@@ -822,6 +880,7 @@ public:
         ROS_WARN("[AREA] Centre de dibuix publicat a /boticelli/drawing_center: x=%.2f y=%.2f", x, y);
     }
 
+    // Publica informacio textual de la millor zona lliure trobada.
     void publishFreeAreaInfo(double area, double x, double y)
     {
         std_msgs::String msg;
@@ -839,6 +898,7 @@ public:
         ROS_WARN("[AREA] %s", msg.data.c_str());
     }
 
+    // Ordre de seguretat: velocitat zero.
     void stopRobot()
     {
         geometry_msgs::Twist vel;
@@ -847,6 +907,7 @@ public:
         vel_pub_.publish(vel);
     }
 
+    // Normalitza angles a [-pi, pi] per fer comparacions de gir coherents.
     double normalizeAngle(double angle)
     {
         while (angle > M_PI) {
@@ -866,6 +927,7 @@ public:
         return r;
     }
 
+    // Comprova si un angle cau dins un interval, tenint en compte el salt de -pi/pi.
     bool angleInside(double angle, double start, double end)
     {
         while (angle < 0.0) {
@@ -922,6 +984,7 @@ public:
         return min_value;
     }
 
+    // Converteix coordenades de cel·la del mapa a metres en el frame map.
     bool mapToWorld(int mx, int my, double& wx, double& wy)
     {
         if (!map_) {
@@ -944,6 +1007,7 @@ public:
         return true;
     }
 
+    // Obte la pose actual del robot usant TF map -> base_link.
     bool getRobotPose(double& x, double& y, double& yaw)
     {
         tf::StampedTransform transform;
@@ -966,6 +1030,7 @@ public:
         return true;
     }
 
+    // Protegeix rutes de fitxer quan es construeix la comanda map_saver.
     std::string shellQuote(const std::string& input)
     {
         std::string output = "'";
@@ -981,6 +1046,7 @@ public:
         return output;
     }
 
+    // Extreu la carpeta pare d'una ruta per crear-la abans de guardar fitxers.
     std::string parentDirectory(const std::string& path)
     {
         size_t pos = path.find_last_of('/');
@@ -993,6 +1059,8 @@ public:
         return path.substr(0, pos);
     }
 
+    // Guarda el mapa de gmapping amb map_saver. Es fa una sola vegada per no
+    // sobreescriure constantment el mateix fitxer.
     bool saveMapIfNeeded()
     {
         if (!auto_save_map_) {
@@ -1044,6 +1112,8 @@ public:
         return false;
     }
 
+    // Busca una regio lliure prou gran al mapa d'ocupacio. Es comproven cel·les al voltant
+    // de cada candidat per garantir espai per al dibuix i marge de seguretat.
     bool findBestFreeSpace(double& best_x, double& best_y)
     {
         if (!map_) {
@@ -1131,7 +1201,7 @@ public:
         int dx8[8] = {1, -1, 0, 0, 1, 1, -1, -1};
         int dy8[8] = {0, 0, 1, -1, 1, -1, 1, -1};
 
-        // --- Distància a obstacles (BFS des de cada cel·la ocupada/desconeguda) ---
+        // Distància a obstacles (BFS des de cada cel·la ocupada/desconeguda)
         // Usem distància en cel·les; guardarem la distància mínima a paret per cada cel·la vàlida
         std::vector<int> dist_to_wall(width * height, std::numeric_limits<int>::max());
         {
@@ -1253,6 +1323,8 @@ public:
         return true;
     }
 
+    // Tria cap a quin costat girar segons l'espai lliure mes gran. El bloqueig temporal
+    // evita oscil·lacions esquerra/dreta quan les lectures son semblants.
     void chooseTurnDirection(float left_clear, float right_clear)
     {
         const float DIFF = 0.10;
@@ -1279,6 +1351,7 @@ public:
         }
     }
 
+    // Control reactiu d'exploracio: avança si davant esta lliure i gira si hi ha obstacle.
     void obstacleAvoidanceMove(const sensor_msgs::LaserScan::ConstPtr& msg)
     {
         geometry_msgs::Twist vel;
@@ -1287,7 +1360,7 @@ public:
             return;
         }
 
-        // --- Detecció d'engancxament durant exploració ---
+        // Detecció d'encallament durant exploració 
         {
             double rx, ry, ryaw;
             if (getRobotPose(rx, ry, ryaw)) {
@@ -1333,7 +1406,7 @@ public:
         float left_clear  = std::min(front_left, left);
         float right_clear = std::min(front_right, right);
 
-        // ---- LÒGICA ADAPTADA AL MODEL DE WAFFLE ----
+        // LÒGICA ADAPTADA AL MODEL DE WAFFLE 
         bool very_close =
             front              < CRITICAL_ZONE ||
             front_left         < CRITICAL_ZONE ||
@@ -1413,6 +1486,8 @@ public:
         vel_pub_.publish(vel);
     }
 
+    // Navegacio simple cap a un objectiu en el mapa. Manté evitacio basica d'obstacles
+    // mentre intenta tornar al punt inicial o anar a la zona de dibuix.
     bool goToGoalMove(const sensor_msgs::LaserScan::ConstPtr& msg)
     {
         double robot_x, robot_y, robot_yaw;
@@ -1460,8 +1535,6 @@ public:
             }
             return false;
         }
-
-
 
         if (mode_ == RETURNING_TO_START)
         {
@@ -1532,6 +1605,8 @@ public:
         return false;
     }
 
+    // Criteri de final d'exploracio. En aquesta versio conservadora s'explora fins
+    // al temps maxim configurat per obtenir un comportament previsible.
     bool shouldFinishExploration(double elapsed, std::string& reason)
     {
         // Sempre explorar fins al temps màxim configurat
@@ -1548,6 +1623,8 @@ public:
         return false;
     }
 
+    // Callback principal del node. Cada LaserScan fa avançar la maquina d'estats:
+    // explorar, tornar a l'inici, calcular zona lliure, anar-hi i avisar READY_FOR_VISION.
     void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
     {
         if (mode_ == FINISHED || found_space_)
@@ -1665,4 +1742,3 @@ int main(int argc, char** argv)
     FindFreeSpaceExplorer node;
     ros::spin();
     return 0;
-}
