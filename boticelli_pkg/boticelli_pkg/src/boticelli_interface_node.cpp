@@ -23,17 +23,33 @@
 #include <sstream>
 #include <string>
 
+/*
+ * Node d'interficie principal de Bot-ticelli.
+ *
+ * Aquest fitxer coordina el sistema complet: mostra el menu, llança els launch
+ * necessaris, envia ordres als altres nodes i espera els missatges que confirmen
+ * que cada etapa ha acabat. No fa SLAM, visio ni seguiment del dibuix directament,
+ * ja que aquestes tasques queden separades en nodes independents.
+ *
+ * Modes principals:
+ *  - Mode 1: gmapping construeix el mapa, l'explorador troba zona lliure i es passa a visio.
+ *  - Mode 2: map_server carrega un mapa existent, AMCL localitza el robot i es dibuixa.
+ *  - Mode 3: sortir del programa.
+ */
 class BoticelliInterface
 {
 private:
     ros::NodeHandle nh_;
 
+    // Publishers d'ordres cap als altres nodes. La interfície envia esdeveniments
+    // simples: capturar contorn, publicar dimensions, anar al punt inicial i començar.
     ros::Publisher cmd_pub_;
     ros::Publisher capture_pub_;
     ros::Publisher dimensions_pub_;
     ros::Publisher go_to_drawing_pub_;
     ros::Publisher start_drawing_pub_;
 
+    // Subscribers d'estat. Cada node informa quan la seva feina esta preparada o acabada.
     ros::Subscriber contour_info_sub_;
     ros::Subscriber drawing_path_sub_;
     ros::Subscriber drawing_ready_sub_;
@@ -43,6 +59,7 @@ private:
 
     ros::ServiceClient global_localization_client_;
 
+    // Flags que espera interficie abans de passar a la fase seguent. 
     bool contour_info_received_;
     bool drawing_path_received_;
     bool drawing_ready_received_;
@@ -50,6 +67,7 @@ private:
     bool drawing_progress_received_;
     bool ready_for_vision_received_;
 
+    // Informacio del dibuix i de l'estat global que es mostra per terminal.
     double aspect_ratio_;
     std::string drawing_path_frame_;
     double drawing_progress_current_;
@@ -57,6 +75,7 @@ private:
     double drawing_progress_percent_;
     std::string current_phase_;
 
+    // Identificadors dels processos roslaunch oberts per poder-los tancar ordenadament.
     pid_t slam_pid_;
     pid_t vision_pid_;
     pid_t drawing_pid_;
@@ -117,6 +136,8 @@ public:
         stopRobot();
     }
 
+    // Bucle principal de l'aplicacio. Es deixa en format interactiu perque, en el robot
+    // real, l'usuari ha de confirmar camera, localitzacio i retolador.
     void run()
     {
         while (ros::ok()) {
@@ -145,6 +166,8 @@ public:
     }
 
 private:
+    // La visio publica informacio del contorn. La relacio d'aspecte permet escalar
+    // el dibuix en metres sense deformar la figura detectada a la camera.
     void contourInfoCallback(const geometry_msgs::Vector3::ConstPtr& msg)
     {
         aspect_ratio_ = msg->z;
@@ -156,6 +179,8 @@ private:
         contour_info_received_ = true;
     }
 
+    // El planner publica la trajectoria final. Es guarda el frame per avisar si el path
+    // no esta referenciat al mapa, que es el frame esperat per navegar i dibuixar.
     void drawingPathCallback(const nav_msgs::Path::ConstPtr& msg)
     {
         if (!msg->poses.empty()) {
@@ -164,6 +189,7 @@ private:
         }
     }
 
+    // El navigator confirma que el robot ja ha arribat al punt inicial del dibuix.
     void drawingReadyCallback(const std_msgs::Bool::ConstPtr& msg)
     {
         if (msg->data) {
@@ -171,6 +197,7 @@ private:
         }
     }
 
+    // El follower confirma que ja ha recorregut tota la trajectoria de dibuix.
     void drawingFinishedCallback(const std_msgs::Bool::ConstPtr& msg)
     {
         if (msg->data) {
@@ -178,6 +205,8 @@ private:
         }
     }
 
+    // Progres publicat pel follower: punt actual, total de punts i percentatge.
+    // La interfície nomes ho mostra, el calcul real el fa el node que segueix el path.
     void drawingProgressCallback(const geometry_msgs::Vector3::ConstPtr& msg)
     {
         drawing_progress_current_ = msg->x;
@@ -186,7 +215,8 @@ private:
         drawing_progress_received_ = true;
     }
 
-
+    // L'explorador publica fases textuals. READY_FOR_VISION indica que el SLAM ja ha
+    // arribat al punt on es pot passar a captura i dibuix.
     void currentPhaseCallback(const std_msgs::String::ConstPtr& msg)
     {
         current_phase_ = msg->data;
@@ -216,6 +246,8 @@ private:
         std::cout << "Opcio: ";
     }
 
+    // Mode complet amb mapa nou. Gmapping continua obert quan es passa a visio, de manera
+    // que no cal relocalitzar amb AMCL: el robot ja esta localitzat dins el mapa que crea.
     void slamAndVisionMode()
     {
         clearScreen();
@@ -233,7 +265,6 @@ private:
         std::cout << "  4. Quan arriba a READY_FOR_VISION, passa directament a visio." << std::endl;
         std::cout << std::endl;
 
-        std::cout << "En aquest mode NO es torna a fer AMCL, perquè gmapping continua actiu." << std::endl;
         stopAllLaunches();
 
         std::string map_name = askNewMapName();
@@ -310,6 +341,8 @@ private:
         waitEnter();
     }
 
+    // Mode amb mapa existent. En aquest cas si cal map_server + AMCL, perque el robot
+    // ha d'estimar la seva posicio dins un mapa guardat anteriorment.
     void drawModeWithExistingMap()
     {
         clearScreen();
@@ -362,6 +395,8 @@ private:
         waitEnter();
     }
 
+    // Flux comu de dibuix: captura, planificacio, navegacio al punt inicial i execucio.
+    // Cada pas retorna bool per poder aturar el flux si algun node no respon.
     bool visionAndDrawingFlow(bool show_title)
     {
         if (show_title) {
@@ -403,6 +438,8 @@ private:
         drawing_progress_percent_ = 0.0;
     }
 
+    // Localitzacio assistida amb AMCL. /global_localization reparteix particules pel mapa
+    // i el gir del robot dona mesures laser de diferents direccions per convergir millor.
     void localizationStep()
     {
         std::cout << std::endl;
@@ -431,6 +468,8 @@ private:
         waitEnter();
     }
 
+    // La captura es fa quan l'usuari confirma que la figura es veu be i llavors
+    // s'envia /capture_contour al node de visio.
     bool captureStep()
     {
         while (ros::ok()) {
@@ -468,6 +507,8 @@ private:
         return false;
     }
 
+    // Converteix la mida escollida per l'usuari en dimensions metriques. El planner
+    // manté la relacio d'aspecte de la figura utilitzant l'aspect_ratio rebut de visio.
     bool pathStep()
     {
         std::cout << std::endl;
@@ -511,6 +552,7 @@ private:
         return true;
     }
 
+    // Mou el robot fins al primer punt del dibuix abans de col·locar el retolador.
     bool navigationStep()
     {
         std::cout << std::endl;
@@ -536,12 +578,13 @@ private:
         return true;
     }
 
+    // Dona l'ordre d'inici al follower. 
     bool startDrawingStep()
     {
         std::cout << std::endl;
         std::cout << "PAS 5 - Dibuix" << std::endl;
         std::cout << std::endl;
-        std::cout << "Baixa el retolador." << std::endl;
+        std::cout << "Col·loca el retolador." << std::endl;
         std::cout << "Quan estigui preparat, prem ENTER per començar." << std::endl;
         waitEnter();
 
@@ -560,6 +603,7 @@ private:
         return true;
     }
 
+    // Espera el final del dibuix i mostra una barra de progres.
     bool waitForDrawingFinished()
     {
         std::cout << std::endl;
@@ -587,6 +631,7 @@ private:
         return drawing_finished_received_;
     }
 
+    // Dibuixa la barra de progres en una sola linia de terminal.
     void printDrawingProgress()
     {
         int percent = static_cast<int>(drawing_progress_percent_ + 0.5);
@@ -625,7 +670,8 @@ private:
         std::cout << std::flush;
     }
 
-
+    // Espera que l'explorador publiqui READY_FOR_VISION. El timeout evita quedar bloquejat
+    // indefinidament si el robot no troba zona lliure o si gmapping no publica mapa.
     bool waitForReadyForVision(double timeout)
     {
         ros::Rate rate(10);
@@ -655,7 +701,8 @@ private:
 
         return ready_for_vision_received_;
     }
-
+     
+    // Crida el servei estandard d'AMCL per reinicialitzar les particules.
     void callGlobalLocalization()
     {
         std::cout << "Cridant /global_localization..." << std::endl;
@@ -675,6 +722,8 @@ private:
         }
     }
 
+    // Llança un roslaunch com a proces independent i guarda la sortida en un log.
+    // Aixo permet que la interfície continuï activa mentre els nodes ROS treballen.
     pid_t launchProcess(const std::string& launch_file,
                         const std::string& log_name,
                         const std::string& extra_args = "")
@@ -711,6 +760,8 @@ private:
         return pid;
     }
 
+    // En mode SLAM nomes es mata l'explorador i gmapping queda viu per mantenir
+    // el mapa i la transformacio de localitzacio generada durant el mapatge.
     void stopExplorerOnly()
     {
         stopRobot();
@@ -719,6 +770,7 @@ private:
         stopRobot();
     }
 
+    // Tanca un roslaunch de forma progressiva. 
     void stopOneLaunch(pid_t& pid)
     {
         if (pid > 0) {
@@ -737,6 +789,8 @@ private:
         }
     }
 
+    // Atura tots els processos i nodes del projecte per evitar conflictes de topics
+    // quan es canvia de mode o es torna al menu.
     void stopAllLaunches()
     {
         stopRobot();
@@ -773,6 +827,7 @@ private:
         return result;
     }
 
+    // Elimina espais i salts de linia sobrants d'una cadena.
     void trim(std::string& text)
     {
         while (!text.empty() &&
@@ -783,6 +838,7 @@ private:
         }
     }
 
+    // Filtra el nom del mapa per evitar caracters problematics en rutes o shell.
     std::string sanitizeMapName(const std::string& raw)
     {
         std::string clean;
@@ -807,6 +863,7 @@ private:
         return clean;
     }
 
+    // Comprova si ja existeix un mapa per no sobreescriure proves reals.
     bool mapYamlExists(const std::string& map_name)
     {
         std::string file = package_path_ + "/maps/" + map_name + ".yaml";
@@ -814,6 +871,7 @@ private:
         return in.good();
     }
 
+    // Mostra els mapes YAML disponibles a la carpeta maps.
     void printAvailableMaps()
     {
         std::cout << std::endl;
@@ -823,6 +881,7 @@ private:
         std::cout << std::endl;
     }
 
+    // Demana un nom nou i obliga que no existeixi encara.
     std::string askNewMapName()
     {
         while (ros::ok()) {
@@ -853,6 +912,7 @@ private:
         return "mapa_nou";
     }
 
+    // Selecciona un mapa existent per carregar-lo amb map_server i AMCL.
     std::string askExistingMapName()
     {
         while (ros::ok()) {
@@ -880,6 +940,7 @@ private:
         return "mapa_aula2";
     }
 
+    // Mides fixes del dibuix. Ajuden a fer proves repetibles i eviten errors manuals.
     double askWidth()
     {
         std::cout << "Selecciona mida:" << std::endl;
@@ -933,6 +994,7 @@ private:
         return false;
     }
 
+    // Dona temps als subscribers a connectar-se abans d'enviar una ordre puntual.
     void waitForSubscribers(ros::Publisher& pub,
                             const std::string& topic_name,
                             double timeout)
@@ -951,6 +1013,7 @@ private:
         }
     }
 
+    // Publica una ordre diverses vegades per fer-la robusta a retards de connexio.
     void publishBoolRepeated(ros::Publisher& pub, bool value, int repetitions)
     {
         std_msgs::Bool msg;
@@ -962,6 +1025,7 @@ private:
         }
     }
 
+    // Gira el robot mentre l'usuari comprova la localitzacio a RViz.
     void rotateUntilEnter(double angular_speed, double max_duration)
     {
         geometry_msgs::Twist cmd;
@@ -985,6 +1049,7 @@ private:
         stopRobot();
     }
 
+    // Comprovacio no bloquejant d'ENTER per no aturar el bucle de gir.
     bool enterPressed()
     {
         fd_set set;
@@ -1001,6 +1066,7 @@ private:
         return rv > 0;
     }
 
+    // Publica velocitat zero diverses vegades per assegurar l'aturada.
     void stopRobot()
     {
         geometry_msgs::Twist cmd;
@@ -1013,6 +1079,7 @@ private:
         }
     }
 
+    // Pausa interactiva estandard.
     void waitEnter(const std::string& message = "")
     {
         if (!message.empty()) {
@@ -1023,6 +1090,7 @@ private:
         std::getline(std::cin, line);
     }
 
+    // Neteja la terminal per mantenir el menu llegible.
     void clearScreen()
     {
         std::system("clear");
@@ -1031,10 +1099,11 @@ private:
 
 BoticelliInterface* global_interface = NULL;
 
+// Gestor de senyals per aturar el robot encara que l'usuari faci Ctrl+C.
 void sigintHandler(int)
 {
     std::cout << std::endl;
-    std::cout << "Aturant Bot-ticelli de forma segura..." << std::endl;
+    std::cout << "Aturant Bot-ticelli..." << std::endl;
 
     if (global_interface != NULL) {
         global_interface->shutdown();
@@ -1054,6 +1123,8 @@ int main(int argc, char** argv)
     signal(SIGINT, sigintHandler);
     signal(SIGTERM, sigintHandler);
 
+    // Spinner separat: els callbacks ROS poden actualitzar flags mentre el fil principal
+    // esta esperant una entrada de teclat.
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
