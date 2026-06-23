@@ -16,6 +16,19 @@
 #include <cmath>
 #include <algorithm>
 
+/*
+ * Node de planificacio del dibuix.
+ *
+ * Rep el contorn detectat per la visio i les dimensions desitjades en metres.
+ * Amb aquesta informacio genera un nav_msgs/Path en el frame map, que despres
+ * utilitzen el navigator i el follower.
+ *
+ * El raonament es:
+ *  - La visio dona punts normalitzats de la figura.
+ *  - La interfície dona mida fisica del dibuix.
+ *  - Aquest node centra la figura respecte el robot/mapa i la converteix en trajectoria.
+ *  - Tambe publica un Marker per veure el dibuix previst a RViz.
+ */
 struct PathPoint
 {
     double x;
@@ -37,9 +50,11 @@ private:
     geometry_msgs::PolygonStamped last_contour_;
     geometry_msgs::Vector3 last_dimensions_;
 
+    // El path nomes es pot construir quan ja han arribat tant el contorn com les dimensions.
     bool has_contour_;
     bool has_dimensions_;
 
+    // Frames de referencia. El path final es publica en global_frame_, normalment "map".
     std::string global_frame_;
     std::string robot_frame_;
 
@@ -49,11 +64,13 @@ private:
     std::string marker_topic_;
     std::string anchor_mode_;
 
+    // Opcions de construccio: permeten centrar/alinear el dibuix respecte la pose actual.
     bool use_robot_pose_as_center_;
     bool align_with_robot_heading_;
     bool invert_y_;
     bool close_path_;
 
+    // Parametres metriques i de simplificacio de punts.
     double drawing_scale_;
     double min_width_;
     double min_height_;
@@ -63,6 +80,7 @@ private:
     double resample_distance_;
     double marker_line_width_;
 
+    // Centre i orientacio final del dibuix en el mapa.
     double center_x_;
     double center_y_;
     double center_yaw_;
@@ -116,6 +134,7 @@ public:
         ROS_INFO("Esperant %s i %s", contour_topic_.c_str(), dimensions_topic_.c_str());
     }
 
+    // Rep el contorn de la visio. Encara no genera path si falten dimensions.
     void contourCallback(const geometry_msgs::PolygonStamped::ConstPtr& msg)
     {
         last_contour_ = *msg;
@@ -125,6 +144,7 @@ public:
         tryBuildDrawing();
     }
 
+    // Rep la mida en metres triada per l'usuari.
     void dimensionsCallback(const geometry_msgs::Vector3::ConstPtr& msg)
     {
         last_dimensions_ = *msg;
@@ -137,6 +157,8 @@ public:
         tryBuildDrawing();
     }
 
+    // Usa TF per situar el centre del dibuix a la pose actual del robot.
+    // Aixo fa que el dibuix es planifiqui on realment esta el robot.
     bool updateCenterFromRobotPose()
     {
         tf::StampedTransform transform;
@@ -163,6 +185,8 @@ public:
         return true;
     }
 
+    // Construeix el path final. Fa escalat, possible inversio d'eix, simplificacio,
+    // re-mostreig i publicacio del Path i del Marker de RViz.
     void tryBuildDrawing()
     {
         if (!has_contour_ || !has_dimensions_) {
@@ -306,6 +330,8 @@ public:
         return output;
     }
 
+    // Algoritme Ramer-Douglas-Peucker: redueix punts redundants mantenint la forma.
+    // Es útil per evitar trajectòries massa denses o sorolloses.
     void rdpSimplify(const std::vector<PathPoint>& points,
                      double epsilon,
                      std::vector<PathPoint>& result)
@@ -347,6 +373,7 @@ public:
         }
     }
 
+    // Distancia d'un punt a un segment, utilitzada per decidir quins punts es poden eliminar.
     double perpendicularDistance(const PathPoint& p,
                                  const PathPoint& a,
                                  const PathPoint& b)
