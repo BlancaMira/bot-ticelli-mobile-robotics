@@ -1,4 +1,0 @@
-<launch>
-  <include file="$(find drawing_pkg)/launch/drawing_planner.launch"/>
-  <include file="$(find drawing_pkg)/launch/drawing_follower.launch"/>
-</launch>

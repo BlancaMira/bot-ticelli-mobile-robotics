@@ -1,0 +1,32 @@
+<launch>
+  <arg name="model" default="waffle"/>
+  <arg name="map_file" default="$(find boticelli_pkg)/maps/mapa_aula2.yaml"/>
+  <arg name="use_move_base" default="false"/>
+  <arg name="use_rviz" default="true"/>
+
+  <env name="TURTLEBOT3_MODEL" value="$(arg model)"/>
+
+  <!-- Carrega el mapa guardat -->
+  <node pkg="map_server"
+        type="map_server"
+        name="map_server"
+        args="$(arg map_file)"
+        output="screen"/>
+
+  <!-- Localització AMCL sobre el mapa -->
+  <include file="$(find turtlebot3_navigation)/launch/amcl.launch"/>
+
+  <!-- Normalment NO fem servir move_base perquè tenim navigator/follower propis -->
+  <include if="$(arg use_move_base)"
+           file="$(find turtlebot3_navigation)/launch/move_base.launch">
+    <arg name="model" value="$(arg model)"/>
+  </include>
+
+  <!-- RViz per veure mapa, robot i trajectòria -->
+  <node if="$(arg use_rviz)"
+        pkg="rviz"
+        type="rviz"
+        name="rviz"
+        output="screen"
+        args="-d $(find boticelli_pkg)/config/boticelli.rviz"/>
+</launch>

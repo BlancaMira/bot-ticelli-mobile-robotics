@@ -1,0 +1,10 @@
+<launch>
+  <node pkg="boticelli_pkg"
+        type="drawing_navigator_node"
+        name="drawing_navigator_node"
+        output="screen">
+
+    <rosparam file="$(find boticelli_pkg)/config/drawing_navigator_params.yaml"
+              command="load"/>
+  </node>
+</launch>

@@ -1,4 +1,0 @@
-<launch>
-  <include file="$(find visio_pkg)/launch/vision.launch"/>
-  <include file="$(find visio_pkg)/launch/user_interface.launch"/>
-</launch>

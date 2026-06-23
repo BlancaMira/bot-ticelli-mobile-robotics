@@ -1,0 +1,5 @@
+<launch>
+  <include file="$(find boticelli_pkg)/launch/drawing_planner.launch"/>
+  <include file="$(find boticelli_pkg)/launch/drawing_navigator.launch"/>
+  <include file="$(find boticelli_pkg)/launch/drawing_follower.launch"/>
+</launch>
