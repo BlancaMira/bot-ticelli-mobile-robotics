@@ -1,19 +1,26 @@
 <launch>
+  <!--
+    Localitzacio sobre un mapa existent.
+
+    map_server carrega el mapa guardat i AMCL (Adaptive Monte Carlo Localization) 
+    estima la pose del robot amb un filtre de particules. 
+    Aquest launch s'utilitza en el mode de dibuix amb mapa ja creat.
+  -->
+  
   <arg name="model" default="waffle"/>
   <arg name="map_file" default="$(find boticelli_pkg)/maps/mapa_aula2.yaml"/>
   <arg name="use_move_base" default="false"/>
   <arg name="use_rviz" default="true"/>
-
   <env name="TURTLEBOT3_MODEL" value="$(arg model)"/>
 
-  <!-- Carrega el mapa guardat -->
+  <!-- Carrega el mapa guardat i publica /map. -->
   <node pkg="map_server"
         type="map_server"
         name="map_server"
         args="$(arg map_file)"
         output="screen"/>
 
-  <!-- Localització AMCL sobre el mapa -->
+  <!-- AMCL localitza el robot dins el mapa mitjancant particules i lectures laser. -->
   <include file="$(find turtlebot3_navigation)/launch/amcl.launch"/>
 
   <!-- Normalment NO fem servir move_base perquè tenim navigator/follower propis -->

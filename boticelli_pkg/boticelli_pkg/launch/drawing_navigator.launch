@@ -1,9 +1,17 @@
 <launch>
+  <!--
+    Navigator del dibuix.
+
+    Abans de començar a dibuixar, aquest node porta el robot fins al punt inicial
+    de /drawing_path i l'orienta amb la tangent del recorregut.
+  -->
+
   <node pkg="boticelli_pkg"
         type="drawing_navigator_node"
         name="drawing_navigator_node"
         output="screen">
 
+    <!-- Parametres de velocitat, tolerancies i control proporcional. -->
     <rosparam file="$(find boticelli_pkg)/config/drawing_navigator_params.yaml"
               command="load"/>
   </node>

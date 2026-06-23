@@ -1,4 +1,11 @@
 <launch>
+  <!--
+    Agrupacio dels tres nodes del dibuix.
+
+    Es deixa separat en un launch propi per poder activar tota la part de dibuix
+    tant despres del SLAM com en el mode amb mapa existent.
+  -->
+
   <include file="$(find boticelli_pkg)/launch/drawing_planner.launch"/>
   <include file="$(find boticelli_pkg)/launch/drawing_navigator.launch"/>
   <include file="$(find boticelli_pkg)/launch/drawing_follower.launch"/>

@@ -1,8 +1,14 @@
 <launch>
+  <!--
+    Launch del mode dibuix amb mapa existent.
+
+    Obre localitzacio sobre un mapa guardat, visio i els tres nodes del dibuix.
+    Aquest mode s'utilitza quan ja tenim un .yaml/.pgm i volem dibuixar sense repetir SLAM.
+  -->
+
   <arg name="model" default="waffle"/>
   <arg name="use_rviz" default="true"/>
   <arg name="map_file" default="$(find boticelli_pkg)/maps/mapa_aula2.yaml"/>
-
   <env name="TURTLEBOT3_MODEL" value="$(arg model)"/>
 
   <!-- Mapa i localització -->
