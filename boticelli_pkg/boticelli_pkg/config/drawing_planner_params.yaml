@@ -1,28 +1,48 @@
+# Parametres del planner del dibuix.
+# Converteix el contorn detectat per visio en una trajectoria nav_msgs/Path
+# en coordenades del mapa.
+
+# Frames TF. El path final es publica en global_frame.
 global_frame: "map"
 robot_frame: "base_footprint"
 
+# Entrades del planner: contorn de visio i dimensions en metres.
 contour_topic: "/contour_points"
 dimensions_topic: "/drawing_dimensions"
 
+# Sortides del planner: trajectoria i marker per RViz.
 path_topic: "/drawing_path"
 marker_topic: "/drawing_marker"
 
+# Si es true, el centre del dibuix es calcula a partir de la pose actual del robot.
 use_robot_pose_as_center: true
+
+# Si es true, orienta el dibuix segons l'orientacio actual del robot.
 align_with_robot_heading: true
+
+# Mode d'ancoratge del dibuix respecte el centre calculat.
 anchor_mode: "center"
 
+# Inverteix l'eix Y per adaptar coordenades d'imatge a coordenades del mapa.
 invert_y: true
+
+# Tanca el path unint final i inici, util per figures tancades.
 close_path: true
 
+# Escala global extra aplicada al dibuix.
 drawing_scale: 1.0
 
+# Mida minima acceptada del dibuix.
 min_width: 0.30
 min_height: 0.30
 
-# Per figures simples amb cantonades:
-# quadrat, triangle, estrella...
+# Filtres geometrics del contorn.
+# min_point_distance elimina punts massa junts.
+# simplify_tolerance es la tolerancia de simplificacio tipus Ramer-Douglas-Peucker.
+# resample_distance reespacia els punts per facilitar el seguiment del robot.
 min_point_distance: 0.018
 simplify_tolerance: 0.008
 resample_distance: 0.040
 
+# Gruix de la linia del marker a RViz.
 marker_line_width: 0.025

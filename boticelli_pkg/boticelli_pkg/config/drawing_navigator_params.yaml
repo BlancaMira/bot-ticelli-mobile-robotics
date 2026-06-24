@@ -1,32 +1,47 @@
+# Parametres del navigator del dibuix.
+# Porta el robot fins al punt inicial de /drawing_path abans de començar a dibuixar.
+
+# Frames TF utilitzats per calcular la pose del robot.
 global_frame: "map"
 robot_frame: "base_footprint"
 
+# Entrada de trajectoria i ordre externa per anar al punt inicial.
 path_topic: "/drawing_path"
 go_topic: "/go_to_drawing"
 
+# Sortida de moviment i confirmacio que el robot ja esta preparat.
 cmd_vel_topic: "/cmd_vel"
 drawing_ready_topic: "/drawing_ready"
 
+# Tolerancies d'arribada al punt inicial i d'orientacio final.
 goal_tolerance: 0.06
 final_angle_tolerance: 0.14
 
+# Velocitat lineal. min_linear_speed evita que el robot es quedi sense moure's
+# quan l'error es petit pero encara no ha arribat.
 linear_speed: 0.08
 min_linear_speed: 0.03
 
+# Velocitats angulars per girar cap a l'objectiu i orientar-se al final.
 angular_speed: 0.55
 min_angular_speed: 0.16
 angular_correction_speed: 0.25
 
+# Guanys del control proporcional de distancia i angle.
 kp_linear: 0.9
 kp_angular: 1.8
 
+# Evita triar un punt inicial massa proper i defineix distancia per calcular tangent.
 min_goal_distance: 0.10
 tangent_distance: 0.08
 
+# Si l'error angular es gran, el robot prioritza girar abans d'avancar.
 rotate_only_angle: 0.75
 
+# Frequencia del bucle de control.
 control_rate: 20.0
 
-# Retolador al centre de gir del robot
+# Offset del retolador respecte el centre del robot.
+# En aquest projecte el retolador esta al centre de gir.
 tool_offset_x: 0.0
 tool_offset_y: 0.0
