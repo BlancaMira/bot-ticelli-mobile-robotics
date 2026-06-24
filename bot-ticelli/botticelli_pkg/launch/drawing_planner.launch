@@ -1,0 +1,18 @@
+﻿<launch>
+  <!--
+    Planner del dibuix.
+
+    Rep /contour_points de visio i /drawing_dimensions de la interfÃ­cie.
+    Publica /drawing_path per als nodes de moviment i /drawing_marker per RViz.
+  -->
+
+  <node pkg="botticelli_pkg"
+        type="drawing_planner_node"
+        name="drawing_planner_node"
+        output="screen">
+
+    <!-- Parametres d'escalat, simplificacio del contorn i frame de sortida. -->
+    <rosparam file="$(find botticelli_pkg)/config/drawing_planner_params.yaml"
+              command="load"/>
+  </node>
+</launch>

@@ -1,0 +1,29 @@
+﻿<?xml version="1.0"?>
+<package format="2">
+  <name>botticelli_pkg</name>
+  <version>1.0.0</version>
+  <description>
+    Paquet principal del projecte Bot-ticelli: mapatge, localitzaciÃ³,
+    visiÃ³ artificial i dibuix de figures amb TurtleBot3.
+  </description>
+
+  <maintainer email="blanca.mira@estudiantat.upc.edu">Equip Bot-ticelli</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>tf</depend>
+
+  <exec_depend>map_server</exec_depend>
+  <exec_depend>gmapping</exec_depend>
+  <exec_depend>turtlebot3_bringup</exec_depend>
+  <exec_depend>turtlebot3_navigation</exec_depend>
+  <exec_depend>rviz</exec_depend>
+</package>

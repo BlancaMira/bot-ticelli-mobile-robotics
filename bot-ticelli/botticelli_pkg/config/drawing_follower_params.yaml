@@ -1,0 +1,95 @@
+# Parametres del follower del dibuix.
+# Segueix /drawing_path quan rep /start_drawing i publica /executed_path,
+# /drawing_progress i /drawing_finished.
+
+# Frames TF utilitzats per saber on es troba el robot dins del mapa.
+global_frame: "map"
+robot_frame: "base_footprint"
+
+# Trajectoria a seguir i topic de velocitat del robot.
+path_topic: "/drawing_path"
+cmd_vel_topic: "/cmd_vel"
+
+# Seguiment general.
+# lookahead_distance es la distancia del punt objectiu avançat del controlador.
+# min_lookahead_distance evita que el punt objectiu quedi massa a prop.
+lookahead_distance: 0.10
+min_lookahead_distance: 0.055
+
+# Velocitat de dibuix. Son valors baixos per prioritzar precisio del traç.
+linear_speed: 0.028
+min_linear_speed: 0.010
+max_reverse_speed: 0.012
+
+# Reduccio de velocitat segons la forma local del path.
+# En corbes i cantonades es redueix la velocitat per millorar la precisio.
+curve_speed_factor: 0.70
+corner_speed_factor: 0.40
+
+# Control angular del seguiment.
+max_angular_speed: 0.45
+angular_gain: 1.8
+
+# Control del retolador.
+# false perque el retolador esta al centre de gir del robot; aixi s'eviten arcs
+# estranys quan el robot gira quiet.
+use_tool_offset_control: false
+tool_offset_x: 0.0
+tool_offset_y: 0.0
+tool_control_gain: 1.4
+
+# Tolerancies de final, waypoint i distancia maxima per començar.
+goal_tolerance: 0.065
+waypoint_tolerance: 0.050
+max_start_distance: 0.40
+closed_goal_tolerance: 0.045
+
+# Llindars angulars per decidir si cal girar quiet o seguir avançant.
+angle_tolerance: 0.10
+turn_in_place_angle: 0.70
+
+# Deteccio de corbes i cantonades.
+# Corba: nomes baixa una mica la velocitat.
+# Cantonada: s'apropa al vertex, para i gira quiet.
+curve_angle_threshold: 0.35
+corner_angle_threshold: 0.75
+
+# Distancies relacionades amb el tractament de cantonades.
+corner_detection_distance: 0.24
+corner_slowdown_distance: 0.16
+corner_stop_radius: 0.060
+corner_tangent_distance: 0.10
+
+# Parametres de progres sobre el path.
+# Limiten fins on es busca el punt mes proper per evitar salts bruscos d'index.
+progress_search_window: 45
+max_progress_index_step: 5
+corner_back_search: 0
+corner_min_index_gap: 5
+
+# Frequencia del bucle de control.
+control_rate: 20.0
+
+# Tractament de figures tancades.
+# Permet començar pel punt mes proper i invertir el sentit si encaixa millor amb l'orientacio.
+rotate_closed_path_to_nearest: true
+reverse_closed_path_to_match_heading: true
+start_heading_weight: 0.08
+closing_start_points: 4
+
+# El follower espera l'ordre /start_drawing abans de moure's.
+require_start_command: true
+
+# false perque ja arriba orientat des del drawing_navigator_node.
+prealign_enabled: false
+
+# true fa que el robot respecti cantonades fortes en comptes d'arrodonir-les.
+stop_at_corners: true
+
+# Parada temporal si apareix un obstacle frontal mentre el robot dibuixa.
+# obstacle_front_angle_deg defineix el sector frontal analitzat a cada costat.
+pause_on_obstacle: true
+obstacle_scan_topic: "/scan"
+obstacle_stop_distance: 0.30
+obstacle_min_distance: 0.12
+obstacle_front_angle_deg: 20.0

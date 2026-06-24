@@ -1,0 +1,35 @@
+# Parametres del node de visio.
+# Rep imatge de camera, detecta el contorn del dibuix i el publica
+# quan la interfície envia l'ordre /capture_contour.
+
+# Topic de la camera. TurtleBot3 Waffle normalment publica imatge comprimida.
+image_topic: "/camera/image/compressed"
+
+# Simplificacio del contorn detectat.
+# Mes petit = mes fidel al dibuix; mes gran = trajectoria mes simplificada.
+epsilon_factor: 0.002
+
+# Area minima en pixels per acceptar un contorn. Evita detectar soroll petit.
+min_area: 500.0
+
+# Suavitzat previ per reduir soroll abans del threshold.
+blur_size: 5
+
+# Mida del kernel morfologic utilitzat per netejar la mascara binaria.
+kernel_size: 3
+
+# Operacio morfologica sobre la mascara.
+# close_open = tanca petits forats i despres elimina soroll.
+morphology_mode: "close_open"
+morphology_iterations: 1
+
+# Mode d'extraccio de contorns d'OpenCV.
+# none conserva mes punts; simple comprimeix segments rectes.
+contour_mode: "none"
+
+# Mida de les finestres de debug d'OpenCV.
+display_width: 400
+display_height: 400
+
+# Si es true, mostra finestres de visualitzacio de la visio.
+show_windows: true

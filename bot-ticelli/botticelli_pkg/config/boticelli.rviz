@@ -1,0 +1,100 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+
+Visualization Manager:
+  Class: ""
+  Enabled: true
+
+  Global Options:
+    Fixed Frame: map
+    Background Color: 48; 48; 48
+    Frame Rate: 30
+
+  Displays:
+    - Class: rviz/Grid
+      Enabled: true
+      Name: Grid
+      Reference Frame: map
+
+    - Class: rviz/RobotModel
+      Enabled: true
+      Name: RobotModel
+      Robot Description: robot_description
+
+    - Class: rviz/Map
+      Enabled: true
+      Name: Map
+      Topic: /map
+      Alpha: 0.7
+
+    - Class: rviz/LaserScan
+      Enabled: true
+      Name: Laser
+      Topic: /scan
+      Size (Pixels): 3
+      Style: Points
+      Queue Size: 10
+      Color Transformer: Intensity
+
+    - Class: rviz/Path
+      Enabled: true
+      Name: Drawing path
+      Topic: /drawing_path
+      Line Style: Lines
+      Line Width: 0.03
+      Buffer Length: 1
+      Color: 25; 255; 0
+
+    - Class: rviz/Path
+      Enabled: true
+      Name: Executed path
+      Topic: /executed_path
+      Line Style: Lines
+      Line Width: 0.03
+      Buffer Length: 1
+      Color: 255; 80; 80
+
+    - Class: rviz/Marker
+      Enabled: true
+      Name: Drawing marker
+      Marker Topic: /drawing_marker
+      Queue Size: 100
+
+    - Class: rviz/Marker
+      Enabled: true
+      Name: Navigator goal marker
+      Marker Topic: /navigator_goal_marker
+      Queue Size: 100
+
+    - Class: rviz/Marker
+      Enabled: true
+      Name: Lookahead marker
+      Marker Topic: /lookahead_marker
+      Queue Size: 100
+
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/SetInitialPose
+      Topic: /initialpose
+    - Class: rviz/SetGoal
+      Topic: /move_base_simple/goal
+
+  Views:
+    Current:
+      Class: rviz/TopDownOrtho
+      Name: TopDownOrtho
+      Target Frame: map
+      Scale: 8
+      X: 0
+      Y: 0
+
+Window Geometry:
+  Width: 1200
+  Height: 900
+  X: 40
+  Y: 40

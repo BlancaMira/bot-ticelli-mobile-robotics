@@ -1,0 +1,17 @@
+﻿<launch>
+  <!--
+    Agrupacio dels tres nodes del dibuix.
+
+    Es deixa separat en un launch propi per poder activar tota la part de dibuix
+    tant despres del SLAM com en el mode amb mapa existent.
+  -->
+
+  <!-- Converteix contorn + dimensions en /drawing_path i /drawing_marker. -->
+  <include file="$(find botticelli_pkg)/launch/drawing_planner.launch"/>
+
+  <!-- Porta el robot fins al punt inicial del path i publica /drawing_ready. -->
+  <include file="$(find botticelli_pkg)/launch/drawing_navigator.launch"/>
+
+  <!-- Segueix el path, publica /executed_path, progres i finalitzacio. -->
+  <include file="$(find botticelli_pkg)/launch/drawing_follower.launch"/>
+</launch>

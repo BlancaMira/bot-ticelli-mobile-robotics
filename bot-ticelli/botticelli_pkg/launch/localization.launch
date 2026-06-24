@@ -1,0 +1,45 @@
+﻿<launch>
+  <!--
+    Localitzacio sobre un mapa existent.
+
+    map_server carrega el mapa guardat i AMCL estima la pose del robot amb un filtre
+    de particules. Aquest launch s'utilitza en el mode de dibuix amb mapa ja creat.
+  -->
+
+  <arg name="model" default="waffle"/>
+
+  <!-- Fitxer .yaml del mapa. El .yaml apunta al .pgm corresponent. -->
+  <arg name="map_file" default="$(find botticelli_pkg)/maps/mapa_aula2.yaml"/>
+
+  <!-- move_base queda opcional perque el projecte usa navigator/follower propis. -->
+  <arg name="use_move_base" default="false"/>
+
+  <!-- RViz permet comprovar mapa, laser, robot, path i markers. -->
+  <arg name="use_rviz" default="true"/>
+
+  <env name="TURTLEBOT3_MODEL" value="$(arg model)"/>
+
+  <!-- Carrega el mapa guardat i publica /map. -->
+  <node pkg="map_server"
+        type="map_server"
+        name="map_server"
+        args="$(arg map_file)"
+        output="screen"/>
+
+  <!-- AMCL localitza el robot dins el mapa mitjancant particules i lectures laser. -->
+  <include file="$(find turtlebot3_navigation)/launch/amcl.launch"/>
+
+  <!-- Normalment no fem servir move_base: la navegacio del dibuix es prÃ²pia. -->
+  <include if="$(arg use_move_base)"
+           file="$(find turtlebot3_navigation)/launch/move_base.launch">
+    <arg name="model" value="$(arg model)"/>
+  </include>
+
+  <!-- Visualitzacio comuna del projecte. -->
+  <node if="$(arg use_rviz)"
+        pkg="rviz"
+        type="rviz"
+        name="rviz"
+        output="screen"
+        args="-d $(find botticelli_pkg)/config/boticelli.rviz"/>
+</launch>
