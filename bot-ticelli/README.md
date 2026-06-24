@@ -1,6 +1,9 @@
 # Bot-ticelli
 
-Bot-ticelli és un projecte desenvolupat amb ROS i TurtleBot3 que permet detectar una figura mitjançant visió per ordinador i reproduir-la físicament sobre el terra mitjançant la trajectòria del robot.
+Bot-ticelli és un projecte desenvolupat amb ROS i el TurtleBot3 model Waffle on el robot explora un espai
+desconegut (o es localitza sobre un mapa ja guardat), troba una zona lliure
+prou gran, detecta una figura mitjançant visió per ordinador,
+i finalment la reprodueix físicament sobre el terra mitjançant la trajectòria del robot.
 
 ## Objectius del Projecte
 
@@ -37,7 +40,6 @@ botticelli_pkg/
 │   └── vision.launch
 │
 ├── maps/
-│   ├── intent_features.txt
 │   ├── intent.*
 │   ├── mapa_aula2.*
 │   ├── mapa_circuit_classe.*
@@ -55,7 +57,7 @@ botticelli_pkg/
 ### Detall dels Nodes i Pipeline de Comunicació
 
 - **`boticelli_interface_node`:** Node central que actua com a orquestrador a través d'una CLI per terminal. Gestiona l'estat global, llança els fitxers `.launch` fills mitjançant subprocesos de Linux (`fork` / `exec`) i coordina les transicions publicant ordres directes.
-- **`free_space_explorer_node`:** Subscrit a `/map` i `/scan`. Genera candidats aleatoris sobre l'espai mitjançant un mostreig de tipus Monte Carlo, verificant que cap cel·la del "full virtual" contingui obstacles ni zones desconegudes, seleccionant el punt que maximitzi la distància de seguretat. Publica a `/drawing_center`.
+- **`free_space_explorer_node`:** Subscrit a `/map` i `/scan`. Cerca de manera determinista la zona lliure més gran: amb una imatge integral comprova quines cel·les permeten encabir el rectangle del dibuix sense tocar obstacles ni zones desconegudes, agrupa aquestes cel·les en components connexes i es queda amb la més gran. Dins d'aquesta zona selecciona el punt amb màxima distància a la paret (calculada amb un BFS multi-font tipus brushfire). Publica a `/drawing_center`.
 - **`vision_node`:** Processa imatges del tòpic `/camera/image/compressed`. Aplica un `GaussianBlur`, binaritza automàticament mitjançant `cv::THRESH_OTSU` invertit, i neteja la màscara amb morfologia de tancament i obertura (`close_open`). Extreu el contorn de major àrea, el simplifica amb l'algorisme de Douglas-Peucker (`approxPolyDP`) i el publica normalitzat ($[0.0, 1.0]$) a `/contour_points`.
 - **`drawing_planner_node`:** Agafa la plantilla de `/contour_points` i el centre de `/drawing_center`. Escala la figura segons les dimensions en metres introduïdes per l'usuari (mantenint la relació d'aspecte de `/contour_info`) i genera el camí global a `/drawing_path`.
 - **`drawing_navigator_node`:** Executa una màquina d'estats finits per desplaçar el robot fins al primer punt del camí de forma controlada (`/cmd_vel`) i orientar-lo seguint la línia tangent abans de recol·locar el retolador. Confirma l'estat a `/drawing_ready`.
