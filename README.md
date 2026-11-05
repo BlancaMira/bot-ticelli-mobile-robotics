@@ -1,4 +1,4 @@
-# Bot-ticelli — Mobile Robot Drawing with ROS
+# Bot-ticelli - Mobile Robot Drawing with ROS
 
 **Advanced Robotics · BSc in Artificial Intelligence · Universitat Politècnica de Catalunya (UPC) · 2026**
 
