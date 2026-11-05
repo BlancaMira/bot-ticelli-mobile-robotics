@@ -1,0 +1,20 @@
+# ROS / catkin
+build/
+devel/
+install/
+logs/
+*.bag
+*.db3
+# Editors, local files and caches
+.vscode/
+.idea/
+.DS_Store
+*~
+*.swp
+__pycache__/
+# Backups and demo video files
+*.save
+*.bak
+*.mp4
+*.mov
+*.avi
