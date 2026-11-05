@@ -17,9 +17,20 @@ The project is implemented in **C++ with ROS 1**, using laser scans, odometry, c
 
 A coordinating node manages transitions between phases. The architecture separates perception, planning, navigation and control into **six C++ ROS nodes**.
 
-## Demonstrations
+## Demonstrations — real TurtleBot3
 
-Demonstration videos were recorded for the university presentation. **YouTube links will be added after verifying the original presentation URLs.** Large videos are intentionally not committed to the repository.
+The team presented videos of the robot drawing on a physical surface, linked directly from the final course presentation:
+
+- **[Drawing demonstration — Pikachu outline](https://youtu.be/Dro_8_x7c0A)** (linked on slides 11–12 of the final presentation).
+- **[Drawing demonstration — star shape](https://youtu.be/gTl-xQZ3lTM)** (linked on slide 13).
+
+[![Pikachu drawing demonstration](https://img.youtube.com/vi/Dro_8_x7c0A/hqdefault.jpg)](https://youtu.be/Dro_8_x7c0A)
+
+[![Star drawing demonstration](https://img.youtube.com/vi/gTl-xQZ3lTM/hqdefault.jpg)](https://youtu.be/gTl-xQZ3lTM)
+
+The videos are linked rather than uploaded to the repository. Their URLs come from the PDF presentation; current playback availability has not been independently confirmed.
+
+The [presentation notes](docs/FINAL_PRESENTATION.md) summarize the implemented workflow, demonstrations and observed limitations.
 
 ## Project structure
 
@@ -34,6 +45,7 @@ botticelli_pkg/
 docs/
 ├── ARCHITECTURE.md  # Node and topic-level design
 ├── SETUP.md         # Build and execution notes
+├── FINAL_PRESENTATION.md # Final results, demos and limitations
 └── PUBLICATION.md   # Scope and publication checks
 ```
 
@@ -66,8 +78,8 @@ Example launch entry points are `boticelli_slam.launch` and `boticelli_draw.laun
 
 ## Scope
 
-This repository contains the source code and example maps developed for the university course. It is **not** a production robotics package, and the full integrated workflow has not been re-tested on hardware as part of this GitHub curation.
+The final coursework presentation documents practical drawing demonstrations with a physical TurtleBot3. Limitations observed include sensitivity to visual contrast, mechanical drawing-holder variation and odometry deviations. This is **not** a production robotics package, and the complete workflow has not been re-tested on hardware as part of this GitHub curation.
 
 ## Credits
 
-Developed as a group project for the BSc in Artificial Intelligence at UPC. The original team repository also records the project's contributors.
+Developed by **Blanca Mira, Laida Queral, Olga Obiols, Pablo Abella and Raul Castillo** for the BSc in Artificial Intelligence at UPC, as credited on the team's final presentation.
